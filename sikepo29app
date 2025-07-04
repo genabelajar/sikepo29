@@ -1,0 +1,1689 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+   <meta charset="UTF-8">
+   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <title>SIKEPO - SD Negeri 29 Terusan</title>
+   <!-- Tailwind CSS CDN -->
+   <script src="https://cdn.tailwindcss.com"></script>
+   <!-- Font Inter -->
+   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+   <!-- Firebase SDK -->
+   <script type="module">
+       // Firebase SDK imports
+       import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+       import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+       import { getFirestore, doc, getDoc, setDoc, collection, query, getDocs, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+
+       // SheetJS (XLSX) for Excel export
+       // Note: This script is loaded globally, not via module import for simplicity in this context.
+       // <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
+
+
+       // Chart.js for graphs
+       // Note: This script is loaded globally, not via module import for simplicity in this context.
+       // <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+
+       // Global variables for Firebase instances
+       window.firebaseApp = null;
+       window.db = null;
+       window.auth = null;
+       window.currentUserId = null;
+       window.isAuthReady = false; // Flag to indicate if auth state has been checked
+
+
+       // Student data as provided
+       const studentsData = [
+           { name: "ABDAN SOLEH", nis: "3155615150", class: "Kelas 4 A" },
+           { name: "ABWABUN RIZKI", nis: "3148664987", class: "Kelas 5 B" },
+           { name: "ADIF AZKA", nis: "3146898877", class: "Kelas 5 A" },
+           { name: "ADIFA JUNIANTI", nis: "3170212098", class: "Kelas 2 A" },
+           { name: "ADILA AZZAHRA", nis: "3167162045", class: "Kelas 2 A" },
+           { name: "AFIF FIRDAUS", nis: "0131954800", class: "Kelas 5 B" },
+           { name: "AFIF MUZAFFAR", nis: "3187554772", class: "Kelas 1 A" },
+           { name: "AGRI HAFNI", nis: "0134793526", class: "Kelas 6" },
+           { name: "AGUS SAPUTRA", nis: "0148563774", class: "Kelas 4 B" },
+           { name: "AHDA MAUZA", nis: "3186214123", class: "Kelas 1 B" },
+           { name: "AHMAD SAKHA ARKAN", nis: "3172129181", class: "Kelas 2 B" },
+           { name: "AHNAF AL HASIBY", nis: "3172736587", class: "Kelas 1 B" },
+           { name: "AHZA AL ISLAMI", nis: "3160386276", class: "Kelas 2 A" },
+           { name: "AISH FAIHA", nis: "0145102207", class: "Kelas 5 B" },
+           { name: "AISYA ALIFA", nis: "3161725174", class: "Kelas 2 B" },
+           { name: "AKHDAN LATIF AZIZAN", nis: "3169324065", class: "Kelas 3 B" },
+           { name: "AKIFAH NAILAH", nis: "3139266708", class: "Kelas 6" },
+           { name: "AL PARISI", nis: "0135602946", class: "Kelas 4 B" },
+           { name: "ALESYA ELVINA", nis: "0136852252", class: "Kelas 5 A" },
+           { name: "ALFIAN RIZKI", nis: "0149119772", class: "Kelas 5 B" },
+           { name: "ALIF GUPRON", nis: "3125091343", class: "Kelas 6" },
+           { name: "ALIFA ADH ZAHRA", nis: "3167573346", class: "Kelas 2 A" },
+           { name: "ALIIFA TAQIYYA", nis: "3166370087", class: "Kelas 2 A" },
+           { name: "ALL ISTIQOMAH", nis: "3179981696", class: "Kelas 1 A" },
+           { name: "ANDIKA SAPUTRA", nis: "3131298133", class: "Kelas 5 B" },
+           { name: "ANDRA FATHIR AR'ASHYID", nis: "3144183317", class: "Kelas 5 B" },
+           { name: "ANDRA PRAYUDA", nis: "3173084319", class: "Kelas 1 A" },
+           { name: "ANIN DITA", nis: "0143402086", class: "Kelas 5 A" },
+           { name: "ANISA SHAKILAH", nis: "3166006738", class: "Kelas 3 B" },
+           { name: "ANNISA NURUL AINI", nis: "3126797487", class: "Kelas 6" },
+           { name: "ANNISAH SABILA", nis: "0141894597", class: "Kelas 4 B" },
+           { name: "AQILLA AYU KENZIA", nis: "3137369360", class: "Kelas 5 B" },
+           { name: "ARIDHAH ZAHIRA", nis: "3166770016", class: "Kelas 3 A" },
+           { name: "ARIF DZAKI", nis: "3158368653", class: "Kelas 3 B" },
+           { name: "ARISTA ADINDA ZAHRA", nis: "3165731254", class: "Kelas 3 A" },
+           { name: "ARKANA IBNU HAPIZ", nis: "3186966980", class: "Kelas 1 A" },
+           { name: "ARSAKHA FIRENDRA", nis: "0163124882", class: "Kelas 3 B" },
+           { name: "ASIMA RASYIDAH", nis: "3171656903", class: "Kelas 1 B" },
+           { name: "ASSYIFA WAROHMAH", nis: "0145559875", class: "Kelas 5 A" },
+           { name: "ASYIFA", nis: "3132084012", class: "Kelas 5 A" },
+           { name: "ATHIFAH NAJIBAH", nis: "3141575137", class: "Kelas 5 B" },
+           { name: "AYUDIA INARA", nis: "3166989578", class: "Kelas 2 B" },
+           { name: "AZALEA RAMADANI", nis: "3183666209", class: "Kelas 1 A" },
+           { name: "AZAM SAPUTRA", nis: "3163535253", class: "Kelas 2 B" },
+           { name: "AZKA AMANI", nis: "3127394232", class: "Kelas 6" },
+           { name: "AZKA NANDANA", nis: "3171828078", class: "Kelas 2 B" },
+           { name: "AZKADINA SYAHIRA", nis: "3186616578", class: "Kelas 1 B" },
+           { name: "AZKIA FITRI", nis: "0137269167", class: "Kelas 5 B" },
+           { name: "AZZAHDAN", nis: "0147437017", class: "Kelas 5 A" },
+           { name: "AZZAHRA", nis: "3164580221", class: "Kelas 2 B" },
+           { name: "AZZAHRA MALIKATUNNISA", nis: "0142606608", class: "Kelas 5 A" },
+           { name: "BILQIS ADIBA", nis: "3148467992", class: "Kelas 4 A" },
+           { name: "DAHLIA SAFITRI", nis: "0155421876", class: "Kelas 3 B" },
+           { name: "DARYL GIBRAN", nis: "3177105635", class: "Kelas 1 A" },
+           { name: "DHAFI ALFARIZKI", nis: "3189107763", class: "Kelas 1 B" },
+           { name: "DHIRA ERIANI EFENDI", nis: "0136193837", class: "Kelas 5 B" },
+           { name: "EL HILAL", nis: "0149878379", class: "Kelas 4 A" },
+           { name: "FAJAR HIBATULLAH", nis: "3147853995", class: "Kelas 4 A" },
+           { name: "FAQIH AL-ARIF BILLAH", nis: "0162980888", class: "Kelas 2 A" },
+           { name: "FARID ABDULLAH", nis: "3159849454", class: "Kelas 3 A" },
+           { name: "FARID ATALLAH", nis: "3173213699", class: "Kelas 1 A" },
+           { name: "FATUR HAERYAN", nis: "3189477950", class: "Kelas 1 B" },
+           { name: "FEBRI YANTA", nis: "0148382960", class: "Kelas 4 B" },
+           { name: "FIDIA ZAHIRA", nis: "3175219013", class: "Kelas 2 B" },
+           { name: "FIKA APRILIA PUTERI", nis: "3162193153", class: "Kelas 3 A" },
+           { name: "FIKRI", nis: "3154327861", class: "Kelas 4 A" },
+           { name: "FIKRI ADITIYA ZAIDAN", nis: "3176698051", class: "Kelas 2 A" },
+           { name: "FIRJATULLAH", nis: "3170009430", class: "Kelas 2 A" },
+           { name: "HABIBAH NUR AINI", nis: "3156544031", class: "Kelas 3 A" },
+           { name: "HADZIQ PIKRI", nis: "3133282159", class: "Kelas 6" },
+           { name: "HANA KHAIRUNNISA", nis: "3152019771", class: "Kelas 3 B" },
+           { name: "HAPIZA HOYIRO", nis: "3150397264", class: "Kelas 3 B" },
+           { name: "HESTYAN PUSPITA NINGRUM", nis: "3176737868", class: "Kelas 1 A" },
+           { name: "HILYA QONITA", nis: "3140539807", class: "Kelas 5 B" },
+           { name: "ILDAH HIJRIAH", nis: "3129581253", class: "Kelas 6" },
+           { name: "ILONA WANIA ALSABA", nis: "3182740868", class: "Kelas 1 A" },
+           { name: "IMAM ALHAFID", nis: "0161714082", class: "Kelas 3 B" },
+           { name: "INTAN AYU DISKA", nis: "3170849022", class: "Kelas 1 B" },
+           { name: "INTAN MAHARANI", nis: "3167437812", class: "Kelas 3 B" },
+           { name: "IQBAL ARKAP", nis: "3153337033", class: "Kelas 4 B" },
+           { name: "IQBAL RAMADHAN", nis: "0125999247", class: "Kelas 6" },
+           { name: "IRFAN YUSRAN ADITYA", nis: "0146514349", class: "Kelas 4 B" },
+           { name: "ISTIQOMAH", nis: "0122591444", class: "Kelas 6" },
+           { name: "IZATUNNISA", nis: "3136662150", class: "Kelas 6" },
+           { name: "IZZAH URRUH", nis: "0147611643", class: "Kelas 4 B" },
+           { name: "JANATAN FIRDAUS", nis: "3178698209", class: "Kelas 1 B" },
+           { name: "JANEETA RAISSA", nis: "0145100679", class: "Kelas 5 B" },
+           { name: "KAYLA AFIFAH", nis: "0135204738", class: "Kelas 6" },
+           { name: "KAYLA SAPINA", nis: "0134359075", class: "Kelas 5 B" },
+           { name: "KENZIE ABDILLAH", nis: "3161203638", class: "Kelas 3 B" },
+           { name: "KEVIN AFFANDI", nis: "3156543397", class: "Kelas 3 B" },
+           { name: "KHOIRIL ANAM", nis: "0123179238", class: "Kelas 6" },
+           { name: "KHOIRUNNISA", nis: "3144391116", class: "Kelas 4 A" },
+           { name: "LIA ZAFIRA", nis: "0122048375", class: "Kelas 6" },
+           { name: "M IRZAH KHOIRULLAH", nis: "0147327198", class: "Kelas 3 B" },
+           { name: "M RAFI MAULANA", nis: "3171271070", class: "Kelas 1 A" },
+           { name: "M. ABID AUFA", nis: "0149957978", class: "Kelas 4 A" },
+           { name: "M. AKIL", nis: "0133853164", class: "Kelas 6" },
+           { name: "M. AL HABSYI", nis: "3179846316", class: "Kelas 2 B" },
+           { name: "M. ALBY FAHRI", nis: "0142513224", class: "Kelas 5 A" },
+           { name: "M. ALFAJRI", nis: "0132059947", class: "Kelas 6" },
+           { name: "M. HABIBIE", nis: "3154655615", class: "Kelas 3 A" },
+           { name: "M. Nahtor Nabil", nis: "0132087512", class: "Kelas 4 B" },
+           { name: "M. NIZAM", nis: "3165316803", class: "Kelas 3 A" },
+           { name: "M. RAFA", nis: "3165882318", class: "Kelas 2 A" },
+           { name: "M. RAFFA ALFARIZQI", nis: "3131445988", class: "Kelas 6" },
+           { name: "M. RAFI RAFFASYA", nis: "0155850169", class: "Kelas 4 B" },
+           { name: "M. SAKHA ABDILLAH", nis: "3133790004", class: "Kelas 5 B" },
+           { name: "M. ZHAFRAN KHAIRI", nis: "0139386311", class: "Kelas 5 A" },
+           { name: "M.IBNU ALNAFIS", nis: "3179454907", class: "Kelas 1 B" },
+           { name: "MAIRA AZZAH", nis: "UNKNOWN_NIS_MAIRA", class: "UNKNOWN_CLASS_MAIRA" } // Placeholder for incomplete data
+       ];
+
+
+       // Homeroom teacher data
+       const teachersData = [
+           { class: "Kelas 6", wali: "Almuttahidin" },
+           { class: "Kelas 5 A", wali: "Risnawati" },
+           { class: "Kelas 5 B", wali: "Eny Marya" },
+           { class: "Kelas 4 A", wali: "Mariatul Kibtiya" },
+           { class: "Kelas 4 B", wali: "Zaharudin" },
+           { class: "Kelas 3 A", wali: "Siti Nursiyah" },
+           { class: "Kelas 3 B", wali: "Rita Ummatun" },
+           { class: "Kelas 2 A", wali: "Roziko" },
+           { class: "Kelas 2 B", wali: "Ambari" },
+           { class: "Kelas 1 A", wali: "Asniar" },
+           { class: "Kelas 1 B", wali: "Marfuah" }
+       ];
+
+
+       // Get unique classes from student data and sort them
+       window.classes = [...new Set(studentsData.map(s => s.class))].sort();
+
+
+       // Initialize Firebase
+       window.addEventListener('load', async () => {
+           try {
+               const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+               const firebaseConfig = typeof __firebase_config !5= 'undefined' ? JSON.parse(__firebase_config) : {};
+
+
+               if (Object.keys(firebaseConfig).length === 0) {
+                   console.error("Firebase config is missing. Please ensure __firebase_config is provided.");
+                   document.getElementById('loading-message').textContent = "Kesalahan: Konfigurasi Firebase tidak ditemukan. Aplikasi tidak dapat dimuat.";
+                   return;
+               }
+
+
+               window.firebaseApp = initializeApp(firebaseConfig);
+               window.db = getFirestore(window.firebaseApp);
+               window.auth = getAuth(window.firebaseApp);
+
+
+               // Authenticate user
+               if (typeof __initial_auth_token !== 'undefined') {
+                   await signInWithCustomToken(window.auth, __initial_auth_token);
+               } else {
+                   await signInAnonymously(window.auth);
+               }
+
+
+               // Listen for auth state changes
+               onAuthStateChanged(window.auth, async (user) => {
+                   if (user) {
+                       window.currentUserId = user.uid;
+                       document.getElementById('user-id-display').textContent = `ID Pengguna: ${window.currentUserId}`;
+                       window.isAuthReady = true;
+                       console.log("Firebase initialized and authenticated. User ID:", window.currentUserId);
+                       await initAppData(); // Initialize app data (students, teachers) after auth
+                       showSection('attendance-input-section'); // Show default section
+                       document.getElementById('loading-overlay').classList.add('hidden'); // Hide loading
+                   } else {
+                       window.currentUserId = null;
+                       window.isAuthReady = true;
+                       document.getElementById('user-id-display').textContent = `ID Pengguna: Tidak Terautentikasi`;
+                       console.log("Firebase initialized, but no user authenticated.");
+                       document.getElementById('loading-message').textContent = "Kesalahan: Autentikasi Firebase gagal. Aplikasi tidak dapat dimuat.";
+                   }
+               });
+
+
+           } catch (error) {
+               console.error("Error initializing Firebase:", error);
+               document.getElementById('loading-message').textContent = `Kesalahan saat memulai aplikasi: ${error.message}.`;
+           }
+       });
+
+
+       // Function to initialize app data (students and teachers) in Firestore
+       async function initAppData() {
+           if (!window.isAuthReady || !window.db) {
+               console.warn("Firebase not ready for data initialization.");
+               return;
+           }
+
+
+           const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+           const studentsColRef = collection(window.db, `artifacts/${appId}/public/data/students`);
+           const teachersColRef = collection(window.db, `artifacts/${appId}/public/data/teachers`);
+
+
+           try {
+               // Check if students data exists, if not, add it
+               const studentsSnapshot = await getDocs(studentsColRef);
+               if (studentsSnapshot.empty) {
+                   console.log("Adding initial student data to Firestore...");
+                   for (const student of studentsData) {
+                       await setDoc(doc(studentsColRef, student.nis), student);
+                   }
+                   console.log("Student data added.");
+               } else {
+                   console.log("Student data already exists in Firestore.");
+               }
+
+
+               // Check if teachers data exists, if not, add it
+               const teachersSnapshot = await getDocs(teachersColRef);
+               if (teachersSnapshot.empty) {
+                   console.log("Adding initial teacher data to Firestore...");
+                   for (const teacher of teachersData) {
+                       await setDoc(doc(teachersColRef, teacher.class), teacher);
+                   }
+                   console.log("Teacher data added.");
+               } else {
+                   console.log("Teacher data already exists in Firestore.");
+               }
+
+
+               // Load students and teachers into global variables for faster access
+               window.allStudents = studentsData; // Use the parsed data directly
+               window.allTeachers = teachersData; // Use the parsed data directly
+
+
+               populateClassDropdowns();
+           } catch (error) {
+               console.error("Error initializing app data:", error);
+           }
+       }
+
+
+       // --- UI Navigation Functions ---
+       function showSection(sectionId) {
+           document.querySelectorAll('.app-section').forEach(section => {
+               section.classList.add('hidden');
+           });
+           document.getElementById(sectionId).classList.remove('hidden');
+
+
+           // Update active navigation link
+           document.querySelectorAll('nav a').forEach(link => {
+               link.classList.remove('bg-blue-700', 'text-white');
+               link.classList.add('text-blue-200', 'hover:bg-blue-600');
+           });
+           document.querySelector(`nav a[onclick="showSection('${sectionId}')"]`).classList.remove('text-blue-200', 'hover:bg-blue-600');
+           document.querySelector(`nav a[onclick="showSection('${sectionId}')"]`).classList.add('bg-blue-700', 'text-white');
+
+
+           // Specific actions for sections
+           if (sectionId === 'recapitulation-section') {
+               renderRecap();
+           }
+       }
+
+
+       // --- Attendance Input Logic ---
+       function populateClassDropdowns() {
+           const classSelect = document.getElementById('attendance-class-select');
+           const recapClassSelect = document.getElementById('recap-class-select');
+           classSelect.innerHTML = '<option value="">Pilih Kelas</option>';
+           recapClassSelect.innerHTML = '<option value="">Semua Kelas</option>'; // For recapitulation, allow "All Classes"
+
+
+           window.classes.forEach(cls => {
+               const option = document.createElement('option');
+               option.value = cls;
+               option.textContent = cls;
+               classSelect.appendChild(option);
+
+
+               const recapOption = document.createElement('option');
+               recapOption.value = cls;
+               recapOption.textContent = cls;
+               recapClassSelect.appendChild(recapOption);
+           });
+       }
+
+
+       async function loadStudentsForAttendance() {
+           const selectedClass = document.getElementById('attendance-class-select').value;
+           const selectedDate = document.getElementById('attendance-date-input').value;
+           const attendanceTableBody = document.getElementById('attendance-table-body');
+           attendanceTableBody.innerHTML = ''; // Clear previous students
+
+
+           if (!selectedClass || !selectedDate) {
+               return;
+           }
+
+
+           const studentsInClass = window.allStudents.filter(s => s.class === selectedClass);
+           const attendanceDocId = `${selectedDate}_${selectedClass.replace(/\s/g, '_')}`; // Use underscore for class name in doc ID
+           const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+           const attendanceDocRef = doc(window.db, `artifacts/${appId}/public/data/attendance`, attendanceDocId);
+
+
+           let existingAttendance = {};
+           try {
+               const docSnap = await getDoc(attendanceDocRef);
+               if (docSnap.exists()) {
+                   existingAttendance = docSnap.data().records.reduce((acc, rec) => {
+                       acc[rec.nis] = rec.status;
+                       return acc;
+                   }, {});
+               }
+           } catch (error) {
+               console.error("Error fetching existing attendance:", error);
+           }
+
+
+           studentsInClass.forEach(student => {
+               const row = document.createElement('tr');
+               row.className = 'border-b border-gray-200';
+               const currentStatus = existingAttendance[student.nis] || 'Hadir'; // Default to Hadir
+
+
+               row.innerHTML = `
+                   <td class="py-3 px-4">${student.name}</td>
+                   <td class="py-3 px-4">
+                       <div class="flex items-center space-x-4">
+                           <label class="inline-flex items-center">
+                               <input type="radio" name="status-${student.nis}" value="Hadir" class="form-radio text-blue-600 h-4 w-4" ${currentStatus === 'Hadir' ? 'checked' : ''}>
+                               <span class="ml-2 text-gray-700">Hadir</span>
+                           </label>
+                           <label class="inline-flex items-center">
+                               <input type="radio" name="status-${student.nis}" value="Sakit" class="form-radio text-yellow-600 h-4 w-4" ${currentStatus === 'Sakit' ? 'checked' : ''}>
+                               <span class="ml-2 text-gray-700">Sakit</span>
+                           </label>
+                           <label class="inline-flex items-center">
+                               <input type="radio" name="status-${student.nis}" value="Izin" class="form-radio text-green-600 h-4 w-4" ${currentStatus === 'Izin' ? 'checked' : ''}>
+                               <span class="ml-2 text-gray-700">Izin</span>
+                           </label>
+                           <label class="inline-flex items-center">
+                               <input type="radio" name="status-${student.nis}" value="Alpha" class="form-radio text-red-600 h-4 w-4" ${currentStatus === 'Alpha' ? 'checked' : ''}>
+                               <span class="ml-2 text-gray-700">Alpha</span>
+                           </label>
+                       </div>
+                   </td>
+               `;
+               attendanceTableBody.appendChild(row);
+           });
+           document.getElementById('save-attendance-btn').classList.remove('hidden');
+       }
+
+
+       async function saveAttendance() {
+           const selectedClass = document.getElementById('attendance-class-select').value;
+           const selectedDate = document.getElementById('attendance-date-input').value;
+
+
+           if (!selectedClass || !selectedDate) {
+               showMessage('Pilih kelas dan tanggal terlebih dahulu.', 'error');
+               return;
+           }
+
+
+           const attendanceRecords = [];
+           const studentsInClass = window.allStudents.filter(s => s.class === selectedClass);
+
+
+           studentsInClass.forEach(student => {
+               const statusElement = document.querySelector(`input[name="status-${student.nis}"]:checked`);
+               if (statusElement) {
+                   attendanceRecords.push({
+                       nis: student.nis,
+                       name: student.name, // Store name for easier lookup in reports
+                       status: statusElement.value
+                   });
+               }
+           });
+
+
+           const attendanceDocId = `${selectedDate}_${selectedClass.replace(/\s/g, '_')}`;
+           const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+           const attendanceDocRef = doc(window.db, `artifacts/${appId}/public/data/attendance`, attendanceDocId);
+
+
+           try {
+               await setDoc(attendanceDocRef, {
+                   date: selectedDate,
+                   class: selectedClass,
+                   records: attendanceRecords
+               });
+               showMessage('Kehadiran berhasil disimpan!', 'success');
+           } catch (error) {
+               console.error("Error saving attendance:", error);
+               showMessage(`Gagal menyimpan kehadiran: ${error.message}`, 'error');
+           }
+       }
+
+
+       // --- Recapitulation Logic ---
+       let myChart = null; // To store the Chart.js instance
+
+
+       async function renderRecap() {
+           const selectedMonthYear = document.getElementById('recap-month-year-input').value;
+           const selectedClass = document.getElementById('recap-class-select').value;
+           const recapTableBody = document.getElementById('recap-table-body');
+           const chartCanvas = document.getElementById('attendanceChart');
+           recapTableBody.innerHTML = '';
+
+
+           if (!selectedMonthYear) {
+               showMessage('Pilih bulan dan tahun untuk rekapitulasi.', 'error');
+               return;
+           }
+
+
+           const [year, month] = selectedMonthYear.split('-');
+           const firstDay = new Date(year, month - 1, 1);
+           const lastDay = new Date(year, month, 0); // Last day of the month
+
+
+           const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+           const attendanceColRef = collection(window.db, `artifacts/${appId}/public/data/attendance`);
+
+
+           let allAttendanceRecords = [];
+           try {
+               const querySnapshot = await getDocs(attendanceColRef);
+               querySnapshot.forEach(docSnap => {
+                   const data = docSnap.data();
+                   const recordDate = new Date(data.date);
+                   // Filter by month and year
+                   if (recordDate >= firstDay && recordDate <= lastDay) {
+                       // Filter by class if a specific class is selected
+                       if (!selectedClass || data.class === selectedClass) {
+                           allAttendanceRecords.push(data);
+                       }
+                   }
+               });
+           } catch (error) {
+               console.error("Error fetching recapitulation data:", error);
+               showMessage(`Gagal memuat data rekapitulasi: ${error.message}`, 'error');
+               return;
+           }
+
+
+           // Aggregate data
+           const studentRecap = {}; // { nis: { name, class, Hadir: count, Sakit: count, Izin: count, Alpha: count } }
+
+
+           // Initialize studentRecap with all relevant students
+           const studentsToProcess = selectedClass ?
+                                    window.allStudents.filter(s => s.class === selectedClass) :
+                                    window.allStudents;
+
+
+           studentsToProcess.forEach(student => {
+               studentRecap[student.nis] = {
+                   name: student.name,
+                   class: student.class,
+                   'Hadir': 0,
+                   'Sakit': 0,
+                   'Izin': 0,
+                   'Alpha': 0
+               };
+           });
+
+
+           allAttendanceRecords.forEach(dailyRecord => {
+               dailyRecord.records.forEach(studentDailyRecord => {
+                   if (studentRecap[studentDailyRecord.nis]) { // Only count if student is in the processed list
+                       studentRecap[studentDailyRecord.nis][studentDailyRecord.status]++;
+                   }
+               });
+           });
+
+
+           // Render table
+           for (const nis in studentRecap) {
+               const data = studentRecap[nis];
+               const row = document.createElement('tr');
+               row.className = 'border-b border-gray-200';
+               row.innerHTML = `
+                   <td class="py-3 px-4">${data.name}</td>
+                   <td class="py-3 px-4">${data.class}</td>
+                   <td class="py-3 px-4">${data.Hadir}</td>
+                   <td class="py-3 px-4">${data.Sakit}</td>
+                   <td class="py-3 px-4">${data.Izin}</td>
+                   <td class="py-3 px-4">${data.Alpha}</td>
+               `;
+               recapTableBody.appendChild(row);
+           }
+
+
+           // Render chart
+           renderChart(studentRecap);
+
+
+           // Enable download buttons
+           document.getElementById('download-excel-btn').classList.remove('hidden');
+           document.getElementById('download-csv-btn').classList.remove('hidden');
+       }
+
+
+       function renderChart(recapData) {
+           const chartCanvas = document.getElementById('attendanceChart');
+           if (myChart) {
+               myChart.destroy(); // Destroy existing chart before creating a new one
+           }
+
+
+           const hadirCount = Object.values(recapData).reduce((sum, student) => sum + student.Hadir, 0);
+           const sakitCount = Object.values(recapData).reduce((sum, student) => sum + student.Sakit, 0);
+           const izinCount = Object.values(recapData).reduce((sum, student) => sum + student.Izin, 0);
+           const alphaCount = Object.values(recapData).reduce((sum, student) => sum + student.Alpha, 0);
+
+
+           myChart = new Chart(chartCanvas, {
+               type: 'bar', // Can be 'bar', 'pie', 'doughnut'
+               data: {
+                   labels: ['Hadir', 'Sakit', 'Izin', 'Alpha'],
+                   datasets: [{
+                       label: 'Jumlah Kehadiran',
+                       data: [hadirCount, sakitCount, izinCount, alphaCount],
+                       backgroundColor: [
+                           'rgba(75, 192, 192, 0.6)', // Hadir
+                           'rgba(255, 206, 86, 0.6)', // Sakit
+                           'rgba(54, 162, 235, 0.6)', // Izin
+                           'rgba(255, 99, 132, 0.6)'  // Alpha
+                       ],
+                       borderColor: [
+                           'rgba(75, 192, 192, 1)',
+                           'rgba(255, 206, 86, 1)',
+                           'rgba(54, 162, 235, 1)',
+                           'rgba(255, 99, 132, 1)'
+                       ],
+                       borderWidth: 1
+                   }]
+               },
+               options: {
+                   responsive: true,
+                   maintainAspectRatio: false,
+                   scales: {
+                       y: {
+                           beginAtZero: true,
+                           title: {
+                               display: true,
+                               text: 'Jumlah Catatan Kehadiran'
+                           }
+                       }
+                   },
+                   plugins: {
+                       title: {
+                           display: true,
+                           text: 'Ringkasan Kehadiran Bulanan'
+                       }
+                   }
+               }
+           });
+       }
+
+
+       // --- Export Functions ---
+       function exportToExcel() {
+           const selectedMonthYear = document.getElementById('recap-month-year-input').value;
+           const selectedClass = document.getElementById('recap-class-select').value;
+           const filename = `Rekap_Kehadiran_SDN29Terusan_${selectedClass || 'SemuaKelas'}_${selectedMonthYear}.xlsx`;
+
+
+           const table = document.getElementById('recap-table');
+           const ws = XLSX.utils.table_to_sheet(table);
+           const wb = XLSX.utils.book_new();
+           XLSX.utils.book_append_sheet(wb, ws, "Rekap Kehadiran");
+           XLSX.writeFile(wb, filename);
+           showMessage('Laporan Excel berhasil diunduh!', 'success');
+       }
+
+
+       function exportToCSV() {
+           const selectedMonthYear = document.getElementById('recap-month-year-input').value;
+           const selectedClass = document.getElementById('recap-class-select').value;
+           const filename = `Rekap_Kehadiran_SDN29Terusan_${selectedClass || 'SemuaKelas'}_${selectedMonthYear}.csv`;
+
+
+           const table = document.getElementById('recap-table');
+           let csv = [];
+           for (let i = 0; i < table.rows.length; i++) {
+               let row = [], cols = table.rows[i].querySelectorAll('td, th');
+               for (let j = 0; j < cols.length; j++) {
+                   row.push(cols[j].innerText);
+               }
+               csv.push(row.join(','));
+           }
+           const csvFile = new Blob([csv.join('\n')], { type: 'text/csv;charset=utf-8;' });
+           const downloadLink = document.createElement('a');
+           downloadLink.href = URL.createObjectURL(csvFile);
+           downloadLink.download = filename;
+           document.body.appendChild(downloadLink);
+           downloadLink.click();
+           document.body.removeChild(downloadLink);
+           showMessage('Laporan CSV berhasil diunduh!', 'success');
+       }
+
+
+       // --- Message Box / Toast Notification ---
+       function showMessage(message, type) {
+           const messageBox = document.getElementById('message-box');
+           messageBox.textContent = message;
+           messageBox.classList.remove('hidden', 'bg-green-100', 'text-green-800', 'bg-red-100', 'text-red-800');
+           if (type === 'success') {
+               messageBox.classList.add('bg-green-100', 'text-green-800');
+           } else if (type === 'error') {
+               messageBox.classList.add('bg-red-100', 'text-red-800');
+           }
+           setTimeout(() => {
+               messageBox.classList.add('hidden');
+           }, 3000); // Hide after 3 seconds
+       }
+
+
+       // Expose functions to global scope for HTML event handlers
+       window.showSection = showSection;
+       window.loadStudentsForAttendance = loadStudentsForAttendance;
+       window.saveAttendance = saveAttendance;
+       window.renderRecap = renderRecap;
+       window.exportToExcel = exportToExcel;
+       window.exportToCSV = exportToCSV;
+   </script>
+   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
+   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+   <style>
+       body {
+           font-family: 'Inter', sans-serif;
+       }
+       /* Custom styles for better radio button alignment */
+       .form-radio {
+           -webkit-appearance: none;
+           -moz-appearance: none;
+           appearance: none;
+           display: inline-block;
+           vertical-align: middle;
+           background-origin: border-box;
+           user-select: none;
+           flex-shrink: 0;
+           border-radius: 100%;
+           border-width: 1px;
+           border-color: #cbd5e0; /* gray-300 */
+       }
+       .form-radio:checked {
+           background-image: url("data:image/svg+xml,%3csvg viewBox='0 0 16 16' fill='white' xmlns='http://www.w3.org/2000/svg'%3e%3ccircle cx='8' cy='8' r='3'/%3e%3c/svg%3e");
+           background-size: 100% 100%;
+           background-position: center;
+           background-repeat: no-repeat;
+       }
+       .form-radio.text-blue-600:checked { background-color: #2563eb; } /* blue-600 */
+       .form-radio.text-yellow-600:checked { background-color: #d97706; } /* yellow-600 */
+       .form-radio.text-green-600:checked { background-color: #059669; } /* green-600 */
+       .form-radio.text-red-600:checked { background-color: #dc2626; } /* red-600 */
+   </style>
+</head>
+<body class="bg-gray-100 text-gray-900 min-h-screen flex flex-col">
+
+
+   <!-- Loading Overlay -->
+   <div id="loading-overlay" class="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center z-50">
+       <div class="bg-white p-8 rounded-lg shadow-lg text-center">
+           <div class="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent mx-auto mb-4"></div>
+           <p id="loading-message" class="text-lg font-semibold text-gray-700">Memuat aplikasi...</p>
+       </div>
+   </div>
+
+
+   <!-- Message Box -->
+   <div id="message-box" class="hidden fixed top-4 right-4 p-4 rounded-lg shadow-md text-sm font-medium z-40 transition-all duration-300 ease-in-out"></div>
+
+
+   <header class="bg-blue-800 text-white p-4 shadow-md flex items-center justify-between flex-wrap">
+       <div class="flex items-center space-x-4">
+           <img src="https://freeimghost.net/images/2025/06/13/MD-02-2.png" alt="Logo SD Negeri 29 Terusan" class="h-12 w-12 rounded-full shadow-lg">
+           <h1 class="text-2xl font-bold">Sistem Informasi Kehadiran Pelajar Online (SIKEPO)</h1>
+       </div>
+       <div class="text-sm mt-2 md:mt-0" id="user-id-display"></div>
+   </header>
+
+
+   <div class="flex flex-1 flex-col md:flex-row">
+       <!-- Sidebar Navigation -->
+       <nav class="bg-blue-800 text-blue-200 w-full md:w-64 p-4 space-y-2 shadow-lg">
+           <a href="#" onclick="showSection('attendance-input-section')" class="block p-3 rounded-lg hover:bg-blue-600 transition-colors duration-200 bg-blue-700 text-white">Input Kehadiran</a>
+           <a href="#" onclick="showSection('recapitulation-section')" class="block p-3 rounded-lg hover:bg-blue-600 transition-colors duration-200">Rekapitulasi & Laporan</a>
+       </nav>
+
+
+       <!-- Main Content Area -->
+       <main class="flex-1 p-6 bg-gray-50 overflow-auto">
+
+
+           <!-- Input Kehadiran Section -->
+           <section id="attendance-input-section" class="app-section bg-white p-6 rounded-lg shadow-xl mb-8">
+               <h2 class="text-3xl font-semibold text-blue-800 mb-6">Input Kehadiran Harian</h2>
+
+
+               <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                   <div>
+                       <label for="attendance-date-input" class="block text-gray-700 text-sm font-bold mb-2">Tanggal:</label>
+                       <input type="date" id="attendance-date-input" class="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500" onchange="loadStudentsForAttendance()">
+                   </div>
+                   <div>
+                       <label for="attendance-class-select" class="block text-gray-700 text-sm font-bold mb-2">Pilih Kelas:</label>
+                       <select id="attendance-class-select" class="shadow border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white" onchange="loadStudentsForAttendance()">
+                           <!-- Options will be populated by JavaScript -->
+                       </select>
+                   </div>
+               </div>
+
+
+               <div class="overflow-x-auto">
+                   <table class="min-w-full bg-white rounded-lg shadow-md">
+                       <thead class="bg-blue-100">
+                           <tr>
+                               <th class="py-3 px-4 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider rounded-tl-lg">Nama Siswa</th>
+                               <th class="py-3 px-4 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider rounded-tr-lg">Status Kehadiran</th>
+                           </tr>
+                       </thead>
+                       <tbody id="attendance-table-body">
+                           <!-- Student rows will be loaded here -->
+                       </tbody>
+                   </table>
+               </div>
+
+
+               <button id="save-attendance-btn" onclick="saveAttendance()" class="hidden mt-6 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition-transform transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75">
+                   Simpan Kehadiran
+               </button>
+           </section>
+
+
+           <!-- Rekapitulasi & Laporan Section -->
+           <section id="recapitulation-section" class="app-section hidden bg-white p-6 rounded-lg shadow-xl mb-8">
+               <h2 class="text-3xl font-semibold text-blue-800 mb-6">Rekapitulasi & Laporan Kehadiran</h2>
+
+
+               <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                   <div>
+                       <label for="recap-month-year-input" class="block text-gray-700 text-sm font-bold mb-2">Pilih Bulan & Tahun:</label>
+                       <input type="month" id="recap-month-year-input" class="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500" onchange="renderRecap()">
+                   </div>
+                   <div>
+                       <label for="recap-class-select" class="block text-gray-700 text-sm font-bold mb-2">Pilih Kelas:</label>
+                       <select id="recap-class-select" class="shadow border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white" onchange="renderRecap()">
+                           <!-- Options will be populated by JavaScript -->
+                       </select>
+                   </div>
+               </div>
+
+
+               <div class="overflow-x-auto mb-8">
+                   <table id="recap-table" class="min-w-full bg-white rounded-lg shadow-md">
+                       <thead class="bg-blue-100">
+                           <tr>
+                               <th class="py-3 px-4 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider rounded-tl-lg">Nama Siswa</th>
+                               <th class="py-3 px-4 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">Kelas</th>
+                               <th class="py-3 px-4 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">Hadir</th>
+                               <th class="py-3 px-4 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">Sakit</th>
+                               <th class="py-3 px-4 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">Izin</th>
+                               <th class="py-3 px-4 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider rounded-tr-lg">Alpha</th>
+                           </tr>
+                       </thead>
+                       <tbody id="recap-table-body">
+                           <!-- Recapitulation data will be loaded here -->
+                       </tbody>
+                   </table>
+               </div>
+
+
+               <div class="mb-8">
+                   <h3 class="text-2xl font-semibold text-blue-700 mb-4">Grafik Kehadiran</h3>
+                   <div class="relative h-80">
+                       <canvas id="attendanceChart"></canvas>
+                   </div>
+               </div>
+
+
+               <div class="flex flex-wrap gap-4">
+                   <button id="download-excel-btn" onclick="exportToExcel()" class="hidden bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition-transform transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-75">
+                       Download Excel
+                   </button>
+                   <button id="download-csv-btn" onclick="exportToCSV()" class="hidden bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition-transform transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-75">
+                       Download Spreadsheet (CSV)
+                   </button>
+               </div>
+           </section>
+       </main>
+   </div>
+
+
+   <footer class="bg-gray-800 text-gray-300 p-4 text-center text-sm flex items-center justify-center flex-wrap">
+       <span class="mr-2">Powered by. Gena Belajar</span>
+       <img src="https://freeimghost.net/images/2025/06/17/Logo-Gena-Belajar.png" alt
+
+<!DOCTYPE html>
+<html lang="id">
+<head>
+   <meta charset="UTF-8">
+   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <title>SIKEPO - SD Negeri 29 Terusan</title>
+   <!-- Tailwind CSS CDN -->
+   <script src="https://cdn.tailwindcss.com"></script>
+   <!-- Font Inter -->
+   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+   <!-- Firebase SDK -->
+   <script type="module">
+       // Firebase SDK imports
+       import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+       import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+       import { getFirestore, doc, getDoc, setDoc, collection, query, getDocs, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+
+       // SheetJS (XLSX) for Excel export
+       // Note: This script is loaded globally, not via module import for simplicity in this context.
+       // <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
+
+
+       // Chart.js for graphs
+       // Note: This script is loaded globally, not via module import for simplicity in this context.
+       // <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+
+       // Global variables for Firebase instances
+       window.firebaseApp = null;
+       window.db = null;
+       window.auth = null;
+       window.currentUserId = null;
+       window.isAuthReady = false; // Flag to indicate if auth state has been checked
+
+
+       // Student data as provided
+       const studentsData = [
+           { name: "ABDAN SOLEH", nis: "3155615150", class: "Kelas 4 A" },
+           { name: "ABWABUN RIZKI", nis: "3148664987", class: "Kelas 5 B" },
+           { name: "ADIF AZKA", nis: "3146898877", class: "Kelas 5 A" },
+           { name: "ADIFA JUNIANTI", nis: "3170212098", class: "Kelas 2 A" },
+           { name: "ADILA AZZAHRA", nis: "3167162045", class: "Kelas 2 A" },
+           { name: "AFIF FIRDAUS", nis: "0131954800", class: "Kelas 5 B" },
+           { name: "AFIF MUZAFFAR", nis: "3187554772", class: "Kelas 1 A" },
+           { name: "AGRI HAFNI", nis: "0134793526", class: "Kelas 6" },
+           { name: "AGUS SAPUTRA", nis: "0148563774", class: "Kelas 4 B" },
+           { name: "AHDA MAUZA", nis: "3186214123", class: "Kelas 1 B" },
+           { name: "AHMAD SAKHA ARKAN", nis: "3172129181", class: "Kelas 2 B" },
+           { name: "AHNAF AL HASIBY", nis: "3172736587", class: "Kelas 1 B" },
+           { name: "AHZA AL ISLAMI", nis: "3160386276", class: "Kelas 2 A" },
+           { name: "AISH FAIHA", nis: "0145102207", class: "Kelas 5 B" },
+           { name: "AISYA ALIFA", nis: "3161725174", class: "Kelas 2 B" },
+           { name: "AKHDAN LATIF AZIZAN", nis: "3169324065", class: "Kelas 3 B" },
+           { name: "AKIFAH NAILAH", nis: "3139266708", class: "Kelas 6" },
+           { name: "AL PARISI", nis: "0135602946", class: "Kelas 4 B" },
+           { name: "ALESYA ELVINA", nis: "0136852252", class: "Kelas 5 A" },
+           { name: "ALFIAN RIZKI", nis: "0149119772", class: "Kelas 5 B" },
+           { name: "ALIF GUPRON", nis: "3125091343", class: "Kelas 6" },
+           { name: "ALIFA ADH ZAHRA", nis: "3167573346", class: "Kelas 2 A" },
+           { name: "ALIIFA TAQIYYA", nis: "3166370087", class: "Kelas 2 A" },
+           { name: "ALL ISTIQOMAH", nis: "3179981696", class: "Kelas 1 A" },
+           { name: "ANDIKA SAPUTRA", nis: "3131298133", class: "Kelas 5 B" },
+           { name: "ANDRA FATHIR AR'ASHYID", nis: "3144183317", class: "Kelas 5 B" },
+           { name: "ANDRA PRAYUDA", nis: "3173084319", class: "Kelas 1 A" },
+           { name: "ANIN DITA", nis: "0143402086", class: "Kelas 5 A" },
+           { name: "ANISA SHAKILAH", nis: "3166006738", class: "Kelas 3 B" },
+           { name: "ANNISA NURUL AINI", nis: "3126797487", class: "Kelas 6" },
+           { name: "ANNISAH SABILA", nis: "0141894597", class: "Kelas 4 B" },
+           { name: "AQILLA AYU KENZIA", nis: "3137369360", class: "Kelas 5 B" },
+           { name: "ARIDHAH ZAHIRA", nis: "3166770016", class: "Kelas 3 A" },
+           { name: "ARIF DZAKI", nis: "3158368653", class: "Kelas 3 B" },
+           { name: "ARISTA ADINDA ZAHRA", nis: "3165731254", class: "Kelas 3 A" },
+           { name: "ARKANA IBNU HAPIZ", nis: "3186966980", class: "Kelas 1 A" },
+           { name: "ARSAKHA FIRENDRA", nis: "0163124882", class: "Kelas 3 B" },
+           { name: "ASIMA RASYIDAH", nis: "3171656903", class: "Kelas 1 B" },
+           { name: "ASSYIFA WAROHMAH", nis: "0145559875", class: "Kelas 5 A" },
+           { name: "ASYIFA", nis: "3132084012", class: "Kelas 5 A" },
+           { name: "ATHIFAH NAJIBAH", nis: "3141575137", class: "Kelas 5 B" },
+           { name: "AYUDIA INARA", nis: "3166989578", class: "Kelas 2 B" },
+           { name: "AZALEA RAMADANI", nis: "3183666209", class: "Kelas 1 A" },
+           { name: "AZAM SAPUTRA", nis: "3163535253", class: "Kelas 2 B" },
+           { name: "AZKA AMANI", nis: "3127394232", class: "Kelas 6" },
+           { name: "AZKA NANDANA", nis: "3171828078", class: "Kelas 2 B" },
+           { name: "AZKADINA SYAHIRA", nis: "3186616578", class: "Kelas 1 B" },
+           { name: "AZKIA FITRI", nis: "0137269167", class: "Kelas 5 B" },
+           { name: "AZZAHDAN", nis: "0147437017", class: "Kelas 5 A" },
+           { name: "AZZAHRA", nis: "3164580221", class: "Kelas 2 B" },
+           { name: "AZZAHRA MALIKATUNNISA", nis: "0142606608", class: "Kelas 5 A" },
+           { name: "BILQIS ADIBA", nis: "3148467992", class: "Kelas 4 A" },
+           { name: "DAHLIA SAFITRI", nis: "0155421876", class: "Kelas 3 B" },
+           { name: "DARYL GIBRAN", nis: "3177105635", class: "Kelas 1 A" },
+           { name: "DHAFI ALFARIZKI", nis: "3189107763", class: "Kelas 1 B" },
+           { name: "DHIRA ERIANI EFENDI", nis: "0136193837", class: "Kelas 5 B" },
+           { name: "EL HILAL", nis: "0149878379", class: "Kelas 4 A" },
+           { name: "FAJAR HIBATULLAH", nis: "3147853995", class: "Kelas 4 A" },
+           { name: "FAQIH AL-ARIF BILLAH", nis: "0162980888", class: "Kelas 2 A" },
+           { name: "FARID ABDULLAH", nis: "3159849454", class: "Kelas 3 A" },
+           { name: "FARID ATALLAH", nis: "3173213699", class: "Kelas 1 A" },
+           { name: "FATUR HAERYAN", nis: "3189477950", class: "Kelas 1 B" },
+           { name: "FEBRI YANTA", nis: "0148382960", class: "Kelas 4 B" },
+           { name: "FIDIA ZAHIRA", nis: "3175219013", class: "Kelas 2 B" },
+           { name: "FIKA APRILIA PUTERI", nis: "3162193153", class: "Kelas 3 A" },
+           { name: "FIKRI", nis: "3154327861", class: "Kelas 4 A" },
+           { name: "FIKRI ADITIYA ZAIDAN", nis: "3176698051", class: "Kelas 2 A" },
+           { name: "FIRJATULLAH", nis: "3170009430", class: "Kelas 2 A" },
+           { name: "HABIBAH NUR AINI", nis: "3156544031", class: "Kelas 3 A" },
+           { name: "HADZIQ PIKRI", nis: "3133282159", class: "Kelas 6" },
+           { name: "HANA KHAIRUNNISA", nis: "3152019771", class: "Kelas 3 B" },
+           { name: "HAPIZA HOYIRO", nis: "3150397264", class: "Kelas 3 B" },
+           { name: "HESTYAN PUSPITA NINGRUM", nis: "3176737868", class: "Kelas 1 A" },
+           { name: "HILYA QONITA", nis: "3140539807", class: "Kelas 5 B" },
+           { name: "ILDAH HIJRIAH", nis: "3129581253", class: "Kelas 6" },
+           { name: "ILONA WANIA ALSABA", nis: "3182740868", class: "Kelas 1 A" },
+           { name: "IMAM ALHAFID", nis: "0161714082", class: "Kelas 3 B" },
+           { name: "INTAN AYU DISKA", nis: "3170849022", class: "Kelas 1 B" },
+           { name: "INTAN MAHARANI", nis: "3167437812", class: "Kelas 3 B" },
+           { name: "IQBAL ARKAP", nis: "3153337033", class: "Kelas 4 B" },
+           { name: "IQBAL RAMADHAN", nis: "0125999247", class: "Kelas 6" },
+           { name: "IRFAN YUSRAN ADITYA", nis: "0146514349", class: "Kelas 4 B" },
+           { name: "ISTIQOMAH", nis: "0122591444", class: "Kelas 6" },
+           { name: "IZATUNNISA", nis: "3136662150", class: "Kelas 6" },
+           { name: "IZZAH URRUH", nis: "0147611643", class: "Kelas 4 B" },
+           { name: "JANATAN FIRDAUS", nis: "3178698209", class: "Kelas 1 B" },
+           { name: "JANEETA RAISSA", nis: "0145100679", class: "Kelas 5 B" },
+           { name: "KAYLA AFIFAH", nis: "0135204738", class: "Kelas 6" },
+           { name: "KAYLA SAPINA", nis: "0134359075", class: "Kelas 5 B" },
+           { name: "KENZIE ABDILLAH", nis: "3161203638", class: "Kelas 3 B" },
+           { name: "KEVIN AFFANDI", nis: "3156543397", class: "Kelas 3 B" },
+           { name: "KHOIRIL ANAM", nis: "0123179238", class: "Kelas 6" },
+           { name: "KHOIRUNNISA", nis: "3144391116", class: "Kelas 4 A" },
+           { name: "LIA ZAFIRA", nis: "0122048375", class: "Kelas 6" },
+           { name: "M IRZAH KHOIRULLAH", nis: "0147327198", class: "Kelas 3 B" },
+           { name: "M RAFI MAULANA", nis: "3171271070", class: "Kelas 1 A" },
+           { name: "M. ABID AUFA", nis: "0149957978", class: "Kelas 4 A" },
+           { name: "M. AKIL", nis: "0133853164", class: "Kelas 6" },
+           { name: "M. AL HABSYI", nis: "3179846316", class: "Kelas 2 B" },
+           { name: "M. ALBY FAHRI", nis: "0142513224", class: "Kelas 5 A" },
+           { name: "M. ALFAJRI", nis: "0132059947", class: "Kelas 6" },
+           { name: "M. HABIBIE", nis: "3154655615", class: "Kelas 3 A" },
+           { name: "M. Nahtor Nabil", nis: "0132087512", class: "Kelas 4 B" },
+           { name: "M. NIZAM", nis: "3165316803", class: "Kelas 3 A" },
+           { name: "M. RAFA", nis: "3165882318", class: "Kelas 2 A" },
+           { name: "M. RAFFA ALFARIZQI", nis: "3131445988", class: "Kelas 6" },
+           { name: "M. RAFI RAFFASYA", nis: "0155850169", class: "Kelas 4 B" },
+           { name: "M. SAKHA ABDILLAH", nis: "3133790004", class: "Kelas 5 B" },
+           { name: "M. ZHAFRAN KHAIRI", nis: "0139386311", class: "Kelas 5 A" },
+           { name: "M.IBNU ALNAFIS", nis: "3179454907", class: "Kelas 1 B" },
+           { name: "MAIRA AZZAH", nis: "UNKNOWN_NIS_MAIRA", class: "UNKNOWN_CLASS_MAIRA" } // Placeholder for incomplete data
+       ];
+
+
+       // Homeroom teacher data
+       const teachersData = [
+           { class: "Kelas 6", wali: "Almuttahidin" },
+           { class: "Kelas 5 A", wali: "Risnawati" },
+           { class: "Kelas 5 B", wali: "Eny Marya" },
+           { class: "Kelas 4 A", wali: "Mariatul Kibtiya" },
+           { class: "Kelas 4 B", wali: "Zaharudin" },
+           { class: "Kelas 3 A", wali: "Siti Nursiyah" },
+           { class: "Kelas 3 B", wali: "Rita Ummatun" },
+           { class: "Kelas 2 A", wali: "Roziko" },
+           { class: "Kelas 2 B", wali: "Ambari" },
+           { class: "Kelas 1 A", wali: "Asniar" },
+           { class: "Kelas 1 B", wali: "Marfuah" }
+       ];
+
+
+       // Get unique classes from student data and sort them
+       window.classes = [...new Set(studentsData.map(s => s.class))].sort();
+
+
+       // Initialize Firebase
+       window.addEventListener('load', async () => {
+           try {
+               const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+               const firebaseConfig = typeof __firebase_config !5= 'undefined' ? JSON.parse(__firebase_config) : {};
+
+
+               if (Object.keys(firebaseConfig).length === 0) {
+                   console.error("Firebase config is missing. Please ensure __firebase_config is provided.");
+                   document.getElementById('loading-message').textContent = "Kesalahan: Konfigurasi Firebase tidak ditemukan. Aplikasi tidak dapat dimuat.";
+                   return;
+               }
+
+
+               window.firebaseApp = initializeApp(firebaseConfig);
+               window.db = getFirestore(window.firebaseApp);
+               window.auth = getAuth(window.firebaseApp);
+
+
+               // Authenticate user
+               if (typeof __initial_auth_token !== 'undefined') {
+                   await signInWithCustomToken(window.auth, __initial_auth_token);
+               } else {
+                   await signInAnonymously(window.auth);
+               }
+
+
+               // Listen for auth state changes
+               onAuthStateChanged(window.auth, async (user) => {
+                   if (user) {
+                       window.currentUserId = user.uid;
+                       document.getElementById('user-id-display').textContent = `ID Pengguna: ${window.currentUserId}`;
+                       window.isAuthReady = true;
+                       console.log("Firebase initialized and authenticated. User ID:", window.currentUserId);
+                       await initAppData(); // Initialize app data (students, teachers) after auth
+                       showSection('attendance-input-section'); // Show default section
+                       document.getElementById('loading-overlay').classList.add('hidden'); // Hide loading
+                   } else {
+                       window.currentUserId = null;
+                       window.isAuthReady = true;
+                       document.getElementById('user-id-display').textContent = `ID Pengguna: Tidak Terautentikasi`;
+                       console.log("Firebase initialized, but no user authenticated.");
+                       document.getElementById('loading-message').textContent = "Kesalahan: Autentikasi Firebase gagal. Aplikasi tidak dapat dimuat.";
+                   }
+               });
+
+
+           } catch (error) {
+               console.error("Error initializing Firebase:", error);
+               document.getElementById('loading-message').textContent = `Kesalahan saat memulai aplikasi: ${error.message}.`;
+           }
+       });
+
+
+       // Function to initialize app data (students and teachers) in Firestore
+       async function initAppData() {
+           if (!window.isAuthReady || !window.db) {
+               console.warn("Firebase not ready for data initialization.");
+               return;
+           }
+
+
+           const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+           const studentsColRef = collection(window.db, `artifacts/${appId}/public/data/students`);
+           const teachersColRef = collection(window.db, `artifacts/${appId}/public/data/teachers`);
+
+
+           try {
+               // Check if students data exists, if not, add it
+               const studentsSnapshot = await getDocs(studentsColRef);
+               if (studentsSnapshot.empty) {
+                   console.log("Adding initial student data to Firestore...");
+                   for (const student of studentsData) {
+                       await setDoc(doc(studentsColRef, student.nis), student);
+                   }
+                   console.log("Student data added.");
+               } else {
+                   console.log("Student data already exists in Firestore.");
+               }
+
+
+               // Check if teachers data exists, if not, add it
+               const teachersSnapshot = await getDocs(teachersColRef);
+               if (teachersSnapshot.empty) {
+                   console.log("Adding initial teacher data to Firestore...");
+                   for (const teacher of teachersData) {
+                       await setDoc(doc(teachersColRef, teacher.class), teacher);
+                   }
+                   console.log("Teacher data added.");
+               } else {
+                   console.log("Teacher data already exists in Firestore.");
+               }
+
+
+               // Load students and teachers into global variables for faster access
+               window.allStudents = studentsData; // Use the parsed data directly
+               window.allTeachers = teachersData; // Use the parsed data directly
+
+
+               populateClassDropdowns();
+           } catch (error) {
+               console.error("Error initializing app data:", error);
+           }
+       }
+
+
+       // --- UI Navigation Functions ---
+       function showSection(sectionId) {
+           document.querySelectorAll('.app-section').forEach(section => {
+               section.classList.add('hidden');
+           });
+           document.getElementById(sectionId).classList.remove('hidden');
+
+
+           // Update active navigation link
+           document.querySelectorAll('nav a').forEach(link => {
+               link.classList.remove('bg-blue-700', 'text-white');
+               link.classList.add('text-blue-200', 'hover:bg-blue-600');
+           });
+           document.querySelector(`nav a[onclick="showSection('${sectionId}')"]`).classList.remove('text-blue-200', 'hover:bg-blue-600');
+           document.querySelector(`nav a[onclick="showSection('${sectionId}')"]`).classList.add('bg-blue-700', 'text-white');
+
+
+           // Specific actions for sections
+           if (sectionId === 'recapitulation-section') {
+               renderRecap();
+           }
+       }
+
+
+       // --- Attendance Input Logic ---
+       function populateClassDropdowns() {
+           const classSelect = document.getElementById('attendance-class-select');
+           const recapClassSelect = document.getElementById('recap-class-select');
+           classSelect.innerHTML = '<option value="">Pilih Kelas</option>';
+           recapClassSelect.innerHTML = '<option value="">Semua Kelas</option>'; // For recapitulation, allow "All Classes"
+
+
+           window.classes.forEach(cls => {
+               const option = document.createElement('option');
+               option.value = cls;
+               option.textContent = cls;
+               classSelect.appendChild(option);
+
+
+               const recapOption = document.createElement('option');
+               recapOption.value = cls;
+               recapOption.textContent = cls;
+               recapClassSelect.appendChild(recapOption);
+           });
+       }
+
+
+       async function loadStudentsForAttendance() {
+           const selectedClass = document.getElementById('attendance-class-select').value;
+           const selectedDate = document.getElementById('attendance-date-input').value;
+           const attendanceTableBody = document.getElementById('attendance-table-body');
+           attendanceTableBody.innerHTML = ''; // Clear previous students
+
+
+           if (!selectedClass || !selectedDate) {
+               return;
+           }
+
+
+           const studentsInClass = window.allStudents.filter(s => s.class === selectedClass);
+           const attendanceDocId = `${selectedDate}_${selectedClass.replace(/\s/g, '_')}`; // Use underscore for class name in doc ID
+           const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+           const attendanceDocRef = doc(window.db, `artifacts/${appId}/public/data/attendance`, attendanceDocId);
+
+
+           let existingAttendance = {};
+           try {
+               const docSnap = await getDoc(attendanceDocRef);
+               if (docSnap.exists()) {
+                   existingAttendance = docSnap.data().records.reduce((acc, rec) => {
+                       acc[rec.nis] = rec.status;
+                       return acc;
+                   }, {});
+               }
+           } catch (error) {
+               console.error("Error fetching existing attendance:", error);
+           }
+
+
+           studentsInClass.forEach(student => {
+               const row = document.createElement('tr');
+               row.className = 'border-b border-gray-200';
+               const currentStatus = existingAttendance[student.nis] || 'Hadir'; // Default to Hadir
+
+
+               row.innerHTML = `
+                   <td class="py-3 px-4">${student.name}</td>
+                   <td class="py-3 px-4">
+                       <div class="flex items-center space-x-4">
+                           <label class="inline-flex items-center">
+                               <input type="radio" name="status-${student.nis}" value="Hadir" class="form-radio text-blue-600 h-4 w-4" ${currentStatus === 'Hadir' ? 'checked' : ''}>
+                               <span class="ml-2 text-gray-700">Hadir</span>
+                           </label>
+                           <label class="inline-flex items-center">
+                               <input type="radio" name="status-${student.nis}" value="Sakit" class="form-radio text-yellow-600 h-4 w-4" ${currentStatus === 'Sakit' ? 'checked' : ''}>
+                               <span class="ml-2 text-gray-700">Sakit</span>
+                           </label>
+                           <label class="inline-flex items-center">
+                               <input type="radio" name="status-${student.nis}" value="Izin" class="form-radio text-green-600 h-4 w-4" ${currentStatus === 'Izin' ? 'checked' : ''}>
+                               <span class="ml-2 text-gray-700">Izin</span>
+                           </label>
+                           <label class="inline-flex items-center">
+                               <input type="radio" name="status-${student.nis}" value="Alpha" class="form-radio text-red-600 h-4 w-4" ${currentStatus === 'Alpha' ? 'checked' : ''}>
+                               <span class="ml-2 text-gray-700">Alpha</span>
+                           </label>
+                       </div>
+                   </td>
+               `;
+               attendanceTableBody.appendChild(row);
+           });
+           document.getElementById('save-attendance-btn').classList.remove('hidden');
+       }
+
+
+       async function saveAttendance() {
+           const selectedClass = document.getElementById('attendance-class-select').value;
+           const selectedDate = document.getElementById('attendance-date-input').value;
+
+
+           if (!selectedClass || !selectedDate) {
+               showMessage('Pilih kelas dan tanggal terlebih dahulu.', 'error');
+               return;
+           }
+
+
+           const attendanceRecords = [];
+           const studentsInClass = window.allStudents.filter(s => s.class === selectedClass);
+
+
+           studentsInClass.forEach(student => {
+               const statusElement = document.querySelector(`input[name="status-${student.nis}"]:checked`);
+               if (statusElement) {
+                   attendanceRecords.push({
+                       nis: student.nis,
+                       name: student.name, // Store name for easier lookup in reports
+                       status: statusElement.value
+                   });
+               }
+           });
+
+
+           const attendanceDocId = `${selectedDate}_${selectedClass.replace(/\s/g, '_')}`;
+           const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+           const attendanceDocRef = doc(window.db, `artifacts/${appId}/public/data/attendance`, attendanceDocId);
+
+
+           try {
+               await setDoc(attendanceDocRef, {
+                   date: selectedDate,
+                   class: selectedClass,
+                   records: attendanceRecords
+               });
+               showMessage('Kehadiran berhasil disimpan!', 'success');
+           } catch (error) {
+               console.error("Error saving attendance:", error);
+               showMessage(`Gagal menyimpan kehadiran: ${error.message}`, 'error');
+           }
+       }
+
+
+       // --- Recapitulation Logic ---
+       let myChart = null; // To store the Chart.js instance
+
+
+       async function renderRecap() {
+           const selectedMonthYear = document.getElementById('recap-month-year-input').value;
+           const selectedClass = document.getElementById('recap-class-select').value;
+           const recapTableBody = document.getElementById('recap-table-body');
+           const chartCanvas = document.getElementById('attendanceChart');
+           recapTableBody.innerHTML = '';
+
+
+           if (!selectedMonthYear) {
+               showMessage('Pilih bulan dan tahun untuk rekapitulasi.', 'error');
+               return;
+           }
+
+
+           const [year, month] = selectedMonthYear.split('-');
+           const firstDay = new Date(year, month - 1, 1);
+           const lastDay = new Date(year, month, 0); // Last day of the month
+
+
+           const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+           const attendanceColRef = collection(window.db, `artifacts/${appId}/public/data/attendance`);
+
+
+           let allAttendanceRecords = [];
+           try {
+               const querySnapshot = await getDocs(attendanceColRef);
+               querySnapshot.forEach(docSnap => {
+                   const data = docSnap.data();
+                   const recordDate = new Date(data.date);
+                   // Filter by month and year
+                   if (recordDate >= firstDay && recordDate <= lastDay) {
+                       // Filter by class if a specific class is selected
+                       if (!selectedClass || data.class === selectedClass) {
+                           allAttendanceRecords.push(data);
+                       }
+                   }
+               });
+           } catch (error) {
+               console.error("Error fetching recapitulation data:", error);
+               showMessage(`Gagal memuat data rekapitulasi: ${error.message}`, 'error');
+               return;
+           }
+
+
+           // Aggregate data
+           const studentRecap = {}; // { nis: { name, class, Hadir: count, Sakit: count, Izin: count, Alpha: count } }
+
+
+           // Initialize studentRecap with all relevant students
+           const studentsToProcess = selectedClass ?
+                                    window.allStudents.filter(s => s.class === selectedClass) :
+                                    window.allStudents;
+
+
+           studentsToProcess.forEach(student => {
+               studentRecap[student.nis] = {
+                   name: student.name,
+                   class: student.class,
+                   'Hadir': 0,
+                   'Sakit': 0,
+                   'Izin': 0,
+                   'Alpha': 0
+               };
+           });
+
+
+           allAttendanceRecords.forEach(dailyRecord => {
+               dailyRecord.records.forEach(studentDailyRecord => {
+                   if (studentRecap[studentDailyRecord.nis]) { // Only count if student is in the processed list
+                       studentRecap[studentDailyRecord.nis][studentDailyRecord.status]++;
+                   }
+               });
+           });
+
+
+           // Render table
+           for (const nis in studentRecap) {
+               const data = studentRecap[nis];
+               const row = document.createElement('tr');
+               row.className = 'border-b border-gray-200';
+               row.innerHTML = `
+                   <td class="py-3 px-4">${data.name}</td>
+                   <td class="py-3 px-4">${data.class}</td>
+                   <td class="py-3 px-4">${data.Hadir}</td>
+                   <td class="py-3 px-4">${data.Sakit}</td>
+                   <td class="py-3 px-4">${data.Izin}</td>
+                   <td class="py-3 px-4">${data.Alpha}</td>
+               `;
+               recapTableBody.appendChild(row);
+           }
+
+
+           // Render chart
+           renderChart(studentRecap);
+
+
+           // Enable download buttons
+           document.getElementById('download-excel-btn').classList.remove('hidden');
+           document.getElementById('download-csv-btn').classList.remove('hidden');
+       }
+
+
+       function renderChart(recapData) {
+           const chartCanvas = document.getElementById('attendanceChart');
+           if (myChart) {
+               myChart.destroy(); // Destroy existing chart before creating a new one
+           }
+
+
+           const hadirCount = Object.values(recapData).reduce((sum, student) => sum + student.Hadir, 0);
+           const sakitCount = Object.values(recapData).reduce((sum, student) => sum + student.Sakit, 0);
+           const izinCount = Object.values(recapData).reduce((sum, student) => sum + student.Izin, 0);
+           const alphaCount = Object.values(recapData).reduce((sum, student) => sum + student.Alpha, 0);
+
+
+           myChart = new Chart(chartCanvas, {
+               type: 'bar', // Can be 'bar', 'pie', 'doughnut'
+               data: {
+                   labels: ['Hadir', 'Sakit', 'Izin', 'Alpha'],
+                   datasets: [{
+                       label: 'Jumlah Kehadiran',
+                       data: [hadirCount, sakitCount, izinCount, alphaCount],
+                       backgroundColor: [
+                           'rgba(75, 192, 192, 0.6)', // Hadir
+                           'rgba(255, 206, 86, 0.6)', // Sakit
+                           'rgba(54, 162, 235, 0.6)', // Izin
+                           'rgba(255, 99, 132, 0.6)'  // Alpha
+                       ],
+                       borderColor: [
+                           'rgba(75, 192, 192, 1)',
+                           'rgba(255, 206, 86, 1)',
+                           'rgba(54, 162, 235, 1)',
+                           'rgba(255, 99, 132, 1)'
+                       ],
+                       borderWidth: 1
+                   }]
+               },
+               options: {
+                   responsive: true,
+                   maintainAspectRatio: false,
+                   scales: {
+                       y: {
+                           beginAtZero: true,
+                           title: {
+                               display: true,
+                               text: 'Jumlah Catatan Kehadiran'
+                           }
+                       }
+                   },
+                   plugins: {
+                       title: {
+                           display: true,
+                           text: 'Ringkasan Kehadiran Bulanan'
+                       }
+                   }
+               }
+           });
+       }
+
+
+       // --- Export Functions ---
+       function exportToExcel() {
+           const selectedMonthYear = document.getElementById('recap-month-year-input').value;
+           const selectedClass = document.getElementById('recap-class-select').value;
+           const filename = `Rekap_Kehadiran_SDN29Terusan_${selectedClass || 'SemuaKelas'}_${selectedMonthYear}.xlsx`;
+
+
+           const table = document.getElementById('recap-table');
+           const ws = XLSX.utils.table_to_sheet(table);
+           const wb = XLSX.utils.book_new();
+           XLSX.utils.book_append_sheet(wb, ws, "Rekap Kehadiran");
+           XLSX.writeFile(wb, filename);
+           showMessage('Laporan Excel berhasil diunduh!', 'success');
+       }
+
+
+       function exportToCSV() {
+           const selectedMonthYear = document.getElementById('recap-month-year-input').value;
+           const selectedClass = document.getElementById('recap-class-select').value;
+           const filename = `Rekap_Kehadiran_SDN29Terusan_${selectedClass || 'SemuaKelas'}_${selectedMonthYear}.csv`;
+
+
+           const table = document.getElementById('recap-table');
+           let csv = [];
+           for (let i = 0; i < table.rows.length; i++) {
+               let row = [], cols = table.rows[i].querySelectorAll('td, th');
+               for (let j = 0; j < cols.length; j++) {
+                   row.push(cols[j].innerText);
+               }
+               csv.push(row.join(','));
+           }
+           const csvFile = new Blob([csv.join('\n')], { type: 'text/csv;charset=utf-8;' });
+           const downloadLink = document.createElement('a');
+           downloadLink.href = URL.createObjectURL(csvFile);
+           downloadLink.download = filename;
+           document.body.appendChild(downloadLink);
+           downloadLink.click();
+           document.body.removeChild(downloadLink);
+           showMessage('Laporan CSV berhasil diunduh!', 'success');
+       }
+
+
+       // --- Message Box / Toast Notification ---
+       function showMessage(message, type) {
+           const messageBox = document.getElementById('message-box');
+           messageBox.textContent = message;
+           messageBox.classList.remove('hidden', 'bg-green-100', 'text-green-800', 'bg-red-100', 'text-red-800');
+           if (type === 'success') {
+               messageBox.classList.add('bg-green-100', 'text-green-800');
+           } else if (type === 'error') {
+               messageBox.classList.add('bg-red-100', 'text-red-800');
+           }
+           setTimeout(() => {
+               messageBox.classList.add('hidden');
+           }, 3000); // Hide after 3 seconds
+       }
+
+
+       // Expose functions to global scope for HTML event handlers
+       window.showSection = showSection;
+       window.loadStudentsForAttendance = loadStudentsForAttendance;
+       window.saveAttendance = saveAttendance;
+       window.renderRecap = renderRecap;
+       window.exportToExcel = exportToExcel;
+       window.exportToCSV = exportToCSV;
+   </script>
+   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
+   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+   <style>
+       body {
+           font-family: 'Inter', sans-serif;
+       }
+       /* Custom styles for better radio button alignment */
+       .form-radio {
+           -webkit-appearance: none;
+           -moz-appearance: none;
+           appearance: none;
+           display: inline-block;
+           vertical-align: middle;
+           background-origin: border-box;
+           user-select: none;
+           flex-shrink: 0;
+           border-radius: 100%;
+           border-width: 1px;
+           border-color: #cbd5e0; /* gray-300 */
+       }
+       .form-radio:checked {
+           background-image: url("data:image/svg+xml,%3csvg viewBox='0 0 16 16' fill='white' xmlns='http://www.w3.org/2000/svg'%3e%3ccircle cx='8' cy='8' r='3'/%3e%3c/svg%3e");
+           background-size: 100% 100%;
+           background-position: center;
+           background-repeat: no-repeat;
+       }
+       .form-radio.text-blue-600:checked { background-color: #2563eb; } /* blue-600 */
+       .form-radio.text-yellow-600:checked { background-color: #d97706; } /* yellow-600 */
+       .form-radio.text-green-600:checked { background-color: #059669; } /* green-600 */
+       .form-radio.text-red-600:checked { background-color: #dc2626; } /* red-600 */
+   </style>
+</head>
+<body class="bg-gray-100 text-gray-900 min-h-screen flex flex-col">
+
+
+   <!-- Loading Overlay -->
+   <div id="loading-overlay" class="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center z-50">
+       <div class="bg-white p-8 rounded-lg shadow-lg text-center">
+           <div class="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent mx-auto mb-4"></div>
+           <p id="loading-message" class="text-lg font-semibold text-gray-700">Memuat aplikasi...</p>
+       </div>
+   </div>
+
+
+   <!-- Message Box -->
+   <div id="message-box" class="hidden fixed top-4 right-4 p-4 rounded-lg shadow-md text-sm font-medium z-40 transition-all duration-300 ease-in-out"></div>
+
+
+   <header class="bg-blue-800 text-white p-4 shadow-md flex items-center justify-between flex-wrap">
+       <div class="flex items-center space-x-4">
+           <img src="https://freeimghost.net/images/2025/06/13/MD-02-2.png" alt="Logo SD Negeri 29 Terusan" class="h-12 w-12 rounded-full shadow-lg">
+           <h1 class="text-2xl font-bold">Sistem Informasi Kehadiran Pelajar Online (SIKEPO)</h1>
+       </div>
+       <div class="text-sm mt-2 md:mt-0" id="user-id-display"></div>
+   </header>
+
+
+   <div class="flex flex-1 flex-col md:flex-row">
+       <!-- Sidebar Navigation -->
+       <nav class="bg-blue-800 text-blue-200 w-full md:w-64 p-4 space-y-2 shadow-lg">
+           <a href="#" onclick="showSection('attendance-input-section')" class="block p-3 rounded-lg hover:bg-blue-600 transition-colors duration-200 bg-blue-700 text-white">Input Kehadiran</a>
+           <a href="#" onclick="showSection('recapitulation-section')" class="block p-3 rounded-lg hover:bg-blue-600 transition-colors duration-200">Rekapitulasi & Laporan</a>
+       </nav>
+
+
+       <!-- Main Content Area -->
+       <main class="flex-1 p-6 bg-gray-50 overflow-auto">
+
+
+           <!-- Input Kehadiran Section -->
+           <section id="attendance-input-section" class="app-section bg-white p-6 rounded-lg shadow-xl mb-8">
+               <h2 class="text-3xl font-semibold text-blue-800 mb-6">Input Kehadiran Harian</h2>
+
+
+               <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                   <div>
+                       <label for="attendance-date-input" class="block text-gray-700 text-sm font-bold mb-2">Tanggal:</label>
+                       <input type="date" id="attendance-date-input" class="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500" onchange="loadStudentsForAttendance()">
+                   </div>
+                   <div>
+                       <label for="attendance-class-select" class="block text-gray-700 text-sm font-bold mb-2">Pilih Kelas:</label>
+                       <select id="attendance-class-select" class="shadow border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white" onchange="loadStudentsForAttendance()">
+                           <!-- Options will be populated by JavaScript -->
+                       </select>
+                   </div>
+               </div>
+
+
+               <div class="overflow-x-auto">
+                   <table class="min-w-full bg-white rounded-lg shadow-md">
+                       <thead class="bg-blue-100">
+                           <tr>
+                               <th class="py-3 px-4 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider rounded-tl-lg">Nama Siswa</th>
+                               <th class="py-3 px-4 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider rounded-tr-lg">Status Kehadiran</th>
+                           </tr>
+                       </thead>
+                       <tbody id="attendance-table-body">
+                           <!-- Student rows will be loaded here -->
+                       </tbody>
+                   </table>
+               </div>
+
+
+               <button id="save-attendance-btn" onclick="saveAttendance()" class="hidden mt-6 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition-transform transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75">
+                   Simpan Kehadiran
+               </button>
+           </section>
+
+
+           <!-- Rekapitulasi & Laporan Section -->
+           <section id="recapitulation-section" class="app-section hidden bg-white p-6 rounded-lg shadow-xl mb-8">
+               <h2 class="text-3xl font-semibold text-blue-800 mb-6">Rekapitulasi & Laporan Kehadiran</h2>
+
+
+               <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                   <div>
+                       <label for="recap-month-year-input" class="block text-gray-700 text-sm font-bold mb-2">Pilih Bulan & Tahun:</label>
+                       <input type="month" id="recap-month-year-input" class="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500" onchange="renderRecap()">
+                   </div>
+                   <div>
+                       <label for="recap-class-select" class="block text-gray-700 text-sm font-bold mb-2">Pilih Kelas:</label>
+                       <select id="recap-class-select" class="shadow border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white" onchange="renderRecap()">
+                           <!-- Options will be populated by JavaScript -->
+                       </select>
+                   </div>
+               </div>
+
+
+               <div class="overflow-x-auto mb-8">
+                   <table id="recap-table" class="min-w-full bg-white rounded-lg shadow-md">
+                       <thead class="bg-blue-100">
+                           <tr>
+                               <th class="py-3 px-4 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider rounded-tl-lg">Nama Siswa</th>
+                               <th class="py-3 px-4 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">Kelas</th>
+                               <th class="py-3 px-4 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">Hadir</th>
+                               <th class="py-3 px-4 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">Sakit</th>
+                               <th class="py-3 px-4 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">Izin</th>
+                               <th class="py-3 px-4 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider rounded-tr-lg">Alpha</th>
+                           </tr>
+                       </thead>
+                       <tbody id="recap-table-body">
+                           <!-- Recapitulation data will be loaded here -->
+                       </tbody>
+                   </table>
+               </div>
+
+
+               <div class="mb-8">
+                   <h3 class="text-2xl font-semibold text-blue-700 mb-4">Grafik Kehadiran</h3>
+                   <div class="relative h-80">
+                       <canvas id="attendanceChart"></canvas>
+                   </div>
+               </div>
+
+
+               <div class="flex flex-wrap gap-4">
+                   <button id="download-excel-btn" onclick="exportToExcel()" class="hidden bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition-transform transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-75">
+                       Download Excel
+                   </button>
+                   <button id="download-csv-btn" onclick="exportToCSV()" class="hidden bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition-transform transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-75">
+                       Download Spreadsheet (CSV)
+                   </button>
+               </div>
+           </section>
+       </main>
+  ="Logo Gena Belajar" class="h-8 w-auto">
+   </footer>
+
+
+</body>
+</html> </div>
+
+
+   <footer class="bg-gray-800 text-gray-300 p-4 text-center text-sm flex items-center justify-center flex-wrap">
+       <span class="mr-2">Powered by. Gena Belajar</span>
+       <img src="https://freeimghost.net/images/2025/06/17/Logo-Gena-Belajar.png" alt="Logo Gena Belajar" class="h-8 w-auto">
+   </footer>
+
+
+</body>
+</html>
